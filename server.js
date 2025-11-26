@@ -5,14 +5,14 @@ const app = express();
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
-// Проверка работы сервера
+// Проверка сервера
 app.get("/", (req, res) => {
   res.send("CAPI server is running.");
 });
 
-// === MAIN CAPI ENDPOINT ===
+// === MAIN CAPI endpoint ===
 app.get("/capi", async (req, res) => {
-  const { event, subid, amount } = req.query;
+  const { event, subid, amount, test_event_code } = req.query;
 
   console.log("📩 Incoming:", req.query);
 
@@ -20,7 +20,7 @@ app.get("/capi", async (req, res) => {
     return res.status(400).json({ error: "Missing event or subid" });
   }
 
-  // Определяем тип события для Facebook CAPI
+  // Определяем событие
   let fbEventName = "";
   if (event === "reg") fbEventName = "CompleteRegistration";
   if (event === "sale") fbEventName = "Purchase";
@@ -29,13 +29,15 @@ app.get("/capi", async (req, res) => {
     return res.status(400).json({ error: "Unknown event type" });
   }
 
-  // CAPI Payload
+  // Facebook Payload
   const payload = {
     data: [
       {
         event_name: fbEventName,
         event_time: Math.floor(Date.now() / 1000),
-        action_source: "server",
+
+        // ВАЖНО: CompleteRegistration не принимает "server"
+        action_source: "website",
 
         user_data: {
           client_user_agent: req.headers["user-agent"] || "Keitaro-Server",
@@ -50,8 +52,10 @@ app.get("/capi", async (req, res) => {
     ]
   };
 
-  // 👉 Принудительно включаем тестовый режим Facebook
-  payload.test_event_code = "TEST4483";
+  // Если это тестовое событие FB
+  if (test_event_code) {
+    payload.test_event_code = test_event_code;
+  }
 
   try {
     const fbResponse = await fetch(
@@ -59,7 +63,7 @@ app.get("/capi", async (req, res) => {
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(payload)
       }
     );
 
@@ -73,6 +77,6 @@ app.get("/capi", async (req, res) => {
   }
 });
 
-// Start server
+// Render PORT
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
