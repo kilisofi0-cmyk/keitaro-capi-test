@@ -5,14 +5,14 @@ const app = express();
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
-// Проверка — жив ли сервер
+// Проверка работы сервера
 app.get("/", (req, res) => {
   res.send("CAPI server is running.");
 });
 
-// === MAIN CAPI endpoint ===
+// === MAIN CAPI ENDPOINT ===
 app.get("/capi", async (req, res) => {
-  const { event, subid, amount, test_event_code } = req.query;
+  const { event, subid, amount } = req.query;
 
   console.log("📩 Incoming:", req.query);
 
@@ -20,7 +20,7 @@ app.get("/capi", async (req, res) => {
     return res.status(400).json({ error: "Missing event or subid" });
   }
 
-  // Определяем название события для Facebook
+  // Определяем тип события для Facebook CAPI
   let fbEventName = "";
   if (event === "reg") fbEventName = "CompleteRegistration";
   if (event === "sale") fbEventName = "Purchase";
@@ -29,7 +29,7 @@ app.get("/capi", async (req, res) => {
     return res.status(400).json({ error: "Unknown event type" });
   }
 
-  // Собираем payload
+  // CAPI Payload
   const payload = {
     data: [
       {
@@ -39,30 +39,29 @@ app.get("/capi", async (req, res) => {
 
         user_data: {
           client_user_agent: req.headers["user-agent"] || "Keitaro-Server",
-          external_id: subid,
+          external_id: subid
         },
 
         custom_data: {
           currency: "USD",
-          value: amount ? Number(amount) : 0,
-        },
-      },
-    ],
+          value: amount ? Number(amount) : 0
+        }
+      }
+    ]
   };
 
-  // Если в запросе есть test_event_code – добавляем его автоматически
-  if (test_event_code) {
-    payload.test_event_code = test_event_code;
-  }
+  // 👉 Принудительно включаем тестовый режим Facebook
+  payload.test_event_code = "TEST4483";
 
   try {
-    const fbURL = `https://graph.facebook.com/v18.0/${process.env.FB_PIXEL}/events?access_token=${process.env.FB_TOKEN}`;
-
-    const fbResponse = await fetch(fbURL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
+    const fbResponse = await fetch(
+      `https://graph.facebook.com/v18.0/${process.env.FB_PIXEL}/events?access_token=${process.env.FB_TOKEN}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      }
+    );
 
     const result = await fbResponse.json();
     console.log("📤 FB Response:", result);
@@ -74,10 +73,6 @@ app.get("/capi", async (req, res) => {
   }
 });
 
-// Render автоматически подставит PORT
+// Start server
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
-FB:", err);
-    res.status(500).json({ error: "FB send failed", details: err });
-  }
-});
