@@ -1,18 +1,6 @@
-import express from "express";
-import fetch from "node-fetch";
-
-const app = express();
-app.use(express.urlencoded({ extended: true }));
-app.use(express.json());
-
-// Проверка — жив ли сервер
-app.get("/", (req, res) => {
-  res.send("CAPI server is running.");
-});
-
 // === MAIN CAPI endpoint ===
 app.get("/capi", async (req, res) => {
-  const { event, subid, amount } = req.query;
+  const { event, subid, amount, test_event_code } = req.query;
 
   console.log("📩 Incoming:", req.query);
 
@@ -20,31 +8,20 @@ app.get("/capi", async (req, res) => {
     return res.status(400).json({ error: "Missing event or subid" });
   }
 
-  // Определяем название события
   let fbEventName = "";
   if (event === "reg") fbEventName = "CompleteRegistration";
   if (event === "sale") fbEventName = "Purchase";
-
-  if (!fbEventName) {
-    return res.status(400).json({ error: "Unknown event type" });
-  }
-
-  // Важно: CompleteRegistration должен идти с action_source = website
-  const actionSource =
-    fbEventName === "CompleteRegistration" ? "website" : "server";
 
   const payload = {
     data: [
       {
         event_name: fbEventName,
         event_time: Math.floor(Date.now() / 1000),
-        action_source: actionSource,
-
+        action_source: "server",
         user_data: {
-          external_id: subid,
-          client_user_agent: req.headers["user-agent"] || "Keitaro-Server"
+          client_user_agent: req.headers["user-agent"] || "Keitaro-Server",
+          external_id: subid
         },
-
         custom_data: {
           currency: "USD",
           value: amount ? Number(amount) : 0
@@ -52,6 +29,11 @@ app.get("/capi", async (req, res) => {
       }
     ]
   };
+
+  // 👉 ВАЖНО: добавляем test_event_code, если он пришёл
+  if (test_event_code) {
+    payload.test_event_code = test_event_code;
+  }
 
   try {
     const fbResponse = await fetch(
@@ -72,7 +54,3 @@ app.get("/capi", async (req, res) => {
     res.status(500).json({ error: "FB send failed", details: err });
   }
 });
-
-// Render автоматически подставит PORT
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
