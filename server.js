@@ -32,23 +32,23 @@ app.get("/capi", async (req, res) => {
   // Собираем payload для Facebook CAPI
   const payload = {
     data: [
-      {
-        event_name: fbEventName,
-        event_time: Math.floor(Date.now() / 1000),
-        action_source: "server",
+  {
+    event_name: fbEventName,
+    event_time: Math.floor(Date.now() / 1000),
+    action_source: fbEventName === "CompleteRegistration" ? "website" : "server",
 
-        user_data: {
-          client_user_agent: req.headers["user-agent"] || "Keitaro-Server",
-          external_id: subid
-        },
+    user_data: {
+      client_user_agent: req.headers["user-agent"] || "Keitaro-Server",
+      external_id: subid
+    },
 
-        custom_data: {
-          currency: "USD",
-          value: amount ? Number(amount) : 0
-        }
-      }
-    ]
-  };
+    custom_data: {
+      currency: "USD",
+      value: amount ? Number(amount) : 0
+    }
+  }
+]
+
 
   try {
     const fbResponse = await fetch(
