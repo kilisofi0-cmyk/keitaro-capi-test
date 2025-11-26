@@ -20,7 +20,7 @@ app.get("/capi", async (req, res) => {
     return res.status(400).json({ error: "Missing event or subid" });
   }
 
-  // Определяем название события для Facebook
+  // Определяем название события
   let fbEventName = "";
   if (event === "reg") fbEventName = "CompleteRegistration";
   if (event === "sale") fbEventName = "Purchase";
@@ -29,26 +29,29 @@ app.get("/capi", async (req, res) => {
     return res.status(400).json({ error: "Unknown event type" });
   }
 
-  // Собираем payload для Facebook CAPI
+  // Важно: CompleteRegistration должен идти с action_source = website
+  const actionSource =
+    fbEventName === "CompleteRegistration" ? "website" : "server";
+
   const payload = {
     data: [
-  {
-    event_name: fbEventName,
-    event_time: Math.floor(Date.now() / 1000),
-    action_source: fbEventName === "CompleteRegistration" ? "website" : "server",
+      {
+        event_name: fbEventName,
+        event_time: Math.floor(Date.now() / 1000),
+        action_source: actionSource,
 
-    user_data: {
-      client_user_agent: req.headers["user-agent"] || "Keitaro-Server",
-      external_id: subid
-    },
+        user_data: {
+          external_id: subid,
+          client_user_agent: req.headers["user-agent"] || "Keitaro-Server"
+        },
 
-    custom_data: {
-      currency: "USD",
-      value: amount ? Number(amount) : 0
-    }
-  }
-]
-
+        custom_data: {
+          currency: "USD",
+          value: amount ? Number(amount) : 0
+        }
+      }
+    ]
+  };
 
   try {
     const fbResponse = await fetch(
@@ -69,7 +72,6 @@ app.get("/capi", async (req, res) => {
     res.status(500).json({ error: "FB send failed", details: err });
   }
 });
-
 
 // Render автоматически подставит PORT
 const PORT = process.env.PORT || 3000;
