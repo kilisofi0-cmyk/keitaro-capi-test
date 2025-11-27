@@ -22,25 +22,28 @@ app.get("/capi", async (req, res) => {
 
   // Подготовка данных для FB
   let payload = {
-    data: [
-      {
-        event_name,
-        event_time: Math.floor(Date.now() / 1000),
-        action_source: "website",
+  data: [
+    {
+      event_name,
+      event_time: Math.floor(Date.now() / 1000),
+      action_source: "website",
 
-        user_data: {
-          fbclid: fbclid || undefined,
-          client_user_agent: ua || undefined,
-          client_ip_address: ip || undefined,
-        },
-
-        event_source_url: "https://spinbetera.com/",
-
-        custom_data: {}
+      user_data: {
+        client_user_agent: ua || undefined,
+        client_ip_address: ip || undefined,
+        external_id: subid || undefined,
       },
-    ],
-    access_token: ACCESS_TOKEN,
-  };
+
+      event_source_url: fbclid 
+        ? `https://spinbetera.com/?fbclid=${fbclid}`
+        : "https://spinbetera.com/",
+
+      custom_data: {},
+    },
+  ],
+  access_token: ACCESS_TOKEN,
+};
+
 
   // Добавляем value/currency только если Purchase
   if (event_name === "Purchase") {
