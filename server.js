@@ -5,14 +5,14 @@ const app = express();
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
-// Проверка сервера
+// Пинг
 app.get("/", (req, res) => {
   res.send("CAPI server is running.");
 });
 
 // === MAIN CAPI endpoint ===
 app.get("/capi", async (req, res) => {
-  const { event, subid, amount, test_event_code } = req.query;
+  const { event, subid, amount, fbclid, ua, ip, test_event_code } = req.query;
 
   console.log("📩 Incoming:", req.query);
 
@@ -20,7 +20,7 @@ app.get("/capi", async (req, res) => {
     return res.status(400).json({ error: "Missing event or subid" });
   }
 
-  // Определяем событие
+  // Название события FB
   let fbEventName = "";
   if (event === "reg") fbEventName = "CompleteRegistration";
   if (event === "sale") fbEventName = "Purchase";
@@ -29,30 +29,39 @@ app.get("/capi", async (req, res) => {
     return res.status(400).json({ error: "Unknown event type" });
   }
 
-  // Facebook Payload
+  // Генерация fbc, если прислали fbclid
+  let fbc = null;
+  if (fbclid) {
+    const ts = Math.floor(Date.now() / 1000);
+    fbc = `fb.1.${ts}.${fbclid}`;
+  }
+
+  // Собираем user_data
+  const user_data = {
+    external_id: subid,
+  };
+
+  if (ua) user_data.client_user_agent = ua;
+  if (ip) user_data.client_ip_address = ip;
+  if (fbc) user_data.fbc = fbc;
+
+  // Собираем payload для Facebook
   const payload = {
     data: [
       {
         event_name: fbEventName,
         event_time: Math.floor(Date.now() / 1000),
-
-        // ВАЖНО: CompleteRegistration не принимает "server"
-        action_source: "website",
-
-        user_data: {
-          client_user_agent: req.headers["user-agent"] || "Keitaro-Server",
-          external_id: subid
-        },
-
+        action_source: "server",
+        user_data,
         custom_data: {
           currency: "USD",
-          value: amount ? Number(amount) : 0
-        }
-      }
-    ]
+          value: amount ? Number(amount) : 0,
+        },
+      },
+    ],
   };
 
-  // Если это тестовое событие FB
+  // Добавляем тестовый код, если есть
   if (test_event_code) {
     payload.test_event_code = test_event_code;
   }
@@ -63,7 +72,7 @@ app.get("/capi", async (req, res) => {
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(payload),
       }
     );
 
@@ -77,6 +86,7 @@ app.get("/capi", async (req, res) => {
   }
 });
 
-// Render PORT
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+
+
