@@ -5,7 +5,7 @@ const app = express();
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
-// Пинг
+// Проверка сервера
 app.get("/", (req, res) => {
   res.send("CAPI server is running.");
 });
@@ -20,7 +20,7 @@ app.get("/capi", async (req, res) => {
     return res.status(400).json({ error: "Missing event or subid" });
   }
 
-  // Название события FB
+  // Определяем название события Facebook
   let fbEventName = "";
   if (event === "reg") fbEventName = "CompleteRegistration";
   if (event === "sale") fbEventName = "Purchase";
@@ -29,39 +29,44 @@ app.get("/capi", async (req, res) => {
     return res.status(400).json({ error: "Unknown event type" });
   }
 
-  // Генерация fbc, если прислали fbclid
+  // ===========================
+  // 🧩 fbc (обязательный параметр, если есть fbclid)
+  // ===========================
+
   let fbc = null;
   if (fbclid) {
-    const ts = Math.floor(Date.now() / 1000);
-    fbc = `fb.1.${ts}.${fbclid}`;
+    fbc = `fb.1.${Math.floor(Date.now() / 1000)}.${fbclid}`;
   }
 
-  // Собираем user_data
+  // USER DATA
   const user_data = {
     external_id: subid,
+    client_user_agent: ua || req.headers["user-agent"] || "Unknown-UA",
+    client_ip_address: ip || req.headers["x-forwarded-for"] || req.socket.remoteAddress,
   };
 
-  if (ua) user_data.client_user_agent = ua;
-  if (ip) user_data.client_ip_address = ip;
   if (fbc) user_data.fbc = fbc;
 
-  // Собираем payload для Facebook
+  // CUSTOM DATA
+  const custom_data = {
+    currency: "USD",
+    value: amount ? Number(amount) : 0,
+  };
+
+  // Полезная нагрузка
   const payload = {
     data: [
       {
         event_name: fbEventName,
         event_time: Math.floor(Date.now() / 1000),
-        action_source: "server",
+        action_source: "website",
         user_data,
-        custom_data: {
-          currency: "USD",
-          value: amount ? Number(amount) : 0,
-        },
-      },
-    ],
+        custom_data,
+      }
+    ]
   };
 
-  // Добавляем тестовый код, если есть
+  // Для тестовых событий FB
   if (test_event_code) {
     payload.test_event_code = test_event_code;
   }
@@ -88,5 +93,6 @@ app.get("/capi", async (req, res) => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+
 
 
