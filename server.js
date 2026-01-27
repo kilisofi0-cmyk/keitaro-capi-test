@@ -4,11 +4,11 @@ import fetch from "node-fetch";
 const app = express();
 const PORT = process.env.PORT || 10000;
 
+// Твои настройки
 const PIXEL_ID = "1533254694385595";
 const ACCESS_TOKEN = "EAAjuGVB95A0BQLWnc0TlR8C7qG7I0jxsYttE5SoGQIVx74jZAJKDgR7ZCp8ulYSZAl6NBVfZCcsWfVPKrthlTwC2K8ioIwBwudEfmFDKxY0Evy95s5M5NTuAwO4issb4UNJeZBhX3Wrj6LVXRfZBDYCKFJyZBOD1eBTtBjv4Y2MTiVZBlh60f2YApaEANTIIkwZDZD";
 
 app.get("/capi", async (req, res) => {
-  // Добавляем параметр landing для получения текущего домена
   const { event, subid, amount, fbclid, ua, ip, landing, test_event_code } = req.query;
 
   console.log("📩 Входящий постбек:", req.query);
@@ -17,18 +17,24 @@ app.get("/capi", async (req, res) => {
     return res.json({ status: "error", message: "Missing subid" });
   }
 
-  // 1. Определяем тип события
-  const event_name = (event === "sale" || event === "lead") ? "Purchase" : "CompleteRegistration";
+  // 1. ЛОГИКА ДОМЕНА (landing)
+  // Если из Кейтаро пришла абракадабра со скобками или пусто, ставим основной домен
+  let cleanDomain = "betterspin.online"; 
+  if (landing && !landing.includes("{") && landing !== "") {
+    cleanDomain = landing.replace(/^https?:\/\//, '').split('/')[0];
+  }
+  const event_url = `https://${cleanDomain}/`;
 
-  // 2. Чистим сумму (валидация для Purchase)
-  let cleanAmount = parseFloat(amount);
-  if (isNaN(cleanAmount)) cleanAmount = 0;
+  // 2. ЛОГИКА CLICK ID (fbc)
+  // Формируем fbc только если fbclid — это реальный ID (без скобок)
+  let fbc = undefined;
+  if (fbclid && !fbclid.includes("{") && fbclid !== "") {
+    fbc = `fb.1.${Math.floor(Date.now() / 1000)}.${fbclid}`;
+  }
 
-  // 3. Собираем FBC в правильном формате
-  const fbc = fbclid ? `fb.1.${Math.floor(Date.now() / 1000)}.${fbclid}` : undefined;
-
-  // 4. Динамический домен (берем из параметра landing, если его нет — используем базовый)
-  const event_url = landing ? `https://${landing}/` : "https://betterspin.online/";
+  // 3. ОПРЕДЕЛЕНИЕ ТИПА СОБЫТИЯ
+  const isPurchase = (event === "sale" || event === "lead");
+  const event_name = isPurchase ? "Purchase" : "CompleteRegistration";
 
   const payload = {
     data: [
@@ -36,19 +42,19 @@ app.get("/capi", async (req, res) => {
         event_name: event_name,
         event_time: Math.floor(Date.now() / 1000),
         action_source: "website",
-        event_id: subid, // subid как уникальный ключ для дедупликации
-        event_source_url: event_url, 
+        event_id: subid,
+        event_source_url: event_url,
         
         user_data: {
           client_user_agent: ua || undefined,
           client_ip_address: ip || undefined,
-          external_id: subid,
+          external_id: subid, // Твой subid из трекера
           fbc: fbc,
         },
 
-        custom_data: event_name === "Purchase" ? {
+        custom_data: isPurchase ? {
           currency: "USD",
-          value: cleanAmount,
+          value: parseFloat(amount) || 0,
         } : {},
       },
     ],
@@ -70,11 +76,11 @@ app.get("/capi", async (req, res) => {
     console.log(`📨 Ответ FB для ${subid}:`, result);
     return res.json({ status: "OK", fb: result });
   } catch (error) {
-    console.error("❌ Ошибка:", error);
+    console.error("❌ Ошибка отправки:", error);
     return res.status(500).json({ status: "error", message: error.message });
   }
 });
 
 app.listen(PORT, () => {
-  console.log(`🚀 Сервер запущен на порту ${PORT}`);
+  console.log(`🚀 Сервер CAPI запущен на порту ${PORT}`);
 });
