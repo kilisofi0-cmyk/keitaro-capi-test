@@ -19,7 +19,7 @@ app.get("/capi", async (req, res) => {
 
   // 1. ЛОГИКА ДОМЕНА (landing)
   // Если из Кейтаро пришла абракадабра со скобками или пусто, ставим основной домен
-  let cleanDomain = "betterspin.online"; 
+  let cleanDomain = "betterspin.site"; 
   if (landing && !landing.includes("{") && landing !== "") {
     cleanDomain = landing.replace(/^https?:\/\//, '').split('/')[0];
   }
