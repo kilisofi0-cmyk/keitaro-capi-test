@@ -5,8 +5,8 @@ const app = express();
 const PORT = process.env.PORT || 10000;
 
 // Твои настройки
-const PIXEL_ID = "4220860564844562";
-const ACCESS_TOKEN = "EAAKM3D0GyZCABRIhsY8ynwlIcESRwZA62Ba2MnUeWnFhy9Sqnz1axkjFRKD5hp5WzyDFGiBZCxdwvEEd9BvGC0jZC69n6noTlHmUqN4tkueWGbgeRVj2h3MNyZBu7RAeqvC3bIy5PAMjTsuPJz5mnZCR0ZCKfQifAvJXiaSZAVSmpAt2BQZBZBMHQsAm8z654ZAAAZDZD";
+const PIXEL_ID = "701410602982054";
+const ACCESS_TOKEN = "EAApZBHgE1EpIBPkquvlZA9FnnZBJSlfhZBZAzOIqK5JzXzxYCFZAZC3fjeUvmZA0y1GsRaUqZATecaEepXJ8fQdLWYzFV4Ubrm6gNmpOZAJdjv7BKtXbOrbTwgyzBt5EC3FmUsMhHd9M3BTEWGduIog80Yat9Je9sb7EJIqMBPfzzZA9es1U68dgWsV7bpRCd40AgZDZD";
 
 app.get("/capi", async (req, res) => {
   const { event, subid, amount, fbclid, ua, ip, landing, test_event_code } = req.query;
