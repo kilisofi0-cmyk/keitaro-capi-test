@@ -5,8 +5,8 @@ import crypto from "crypto";
 const app = express();
 const PORT = process.env.PORT || 10000;
 
-const PIXEL_ID = process.env.PIXEL_ID || "701410602982054";
-const ACCESS_TOKEN = process.env.ACCESS_TOKEN || "EAApZBHgE1EpIBPkquvlZA9FnnZBJSlfhZBZAzOIqK5JzXzxYCFZAZC3fjeUvmZA0y1GsRaUqZATecaEepXJ8fQdLWYzFV4Ubrm6gNmpOZAJdjv7BKtXbOrbTwgyzBt5EC3FmUsMhHd9M3BTEWGduIog80Yat9Je9sb7EJIqMBPfzzZA9es1U68dgWsV7bpRCd40AgZDZD";
+const PIXEL_ID = process.env.PIXEL_ID || "979608831100451";
+const ACCESS_TOKEN = process.env.ACCESS_TOKEN || "EAApZBHgE1EpIBRXKf7XdJggxCCMFLrAoVKfZAgu39iYLPmPr0NArcZAY5xClCXOoyzS34WfxJnbsCb78rNYZAuVWZCRq2bXWc5v3t6flbQUZC0JG4O9ng1uQiK6RsWZArZAWqbtNLUrBD7LEjhNqBnBnTYZBlRYqkL7MOFzyDO3Lj29ZCfwqI4RM4Mr60eMZCDvywZDZD";
 const API_VERSION = "v21.0";
 
 const hash = (value) =>
