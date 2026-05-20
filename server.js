@@ -23,7 +23,7 @@ app.get("/capi", async (req, res) => {
     return res.status(400).json({ status: "error", message: "Missing subid" });
   }
 
-  let cleanDomain = "betterspin.site";
+  let cleanDomain = "orbitflow.lol";
   if (isReal(landing)) {
     cleanDomain = landing.replace(/^https?:\/\//, "").split("/")[0];
   }
