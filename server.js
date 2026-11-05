@@ -6,31 +6,46 @@ const PORT = process.env.PORT || 10000;
 const PIXEL_ID = process.env.PIXEL_ID || "1469493875087874";
 const ACCESS_TOKEN = process.env.ACCESS_TOKEN || "EAAaZAMjqtXZB4BSzSZBUdVObO89XfW8cwpfP6gUG8abNKS1WRWkKGyvVD3uPAqu6ZBvmeItlg5EfC01ChBCMZAlYE4ZCVQ4DZCqzIwNZBVHmaTXRZBSoBgJXBZCmBrAnSN9EZA1QdCcUdAGnPZBfRqrKjGUtTtICZCx1ClSIhD2nk3VVHPDPPNqPJPmRZB0gdgutY075C1qgZDZD";
 const API_VERSION = "v21.0";
+
 const hash = (value) =>
   value ? crypto.createHash("sha256").update(String(value).trim().toLowerCase()).digest("hex") : undefined;
 const isReal = (val) => val && !val.includes("{") && val.trim() !== "";
+
 app.get("/capi", async (req, res) => {
   const { event, subid, amount, fbclid, fbp, ua, ip, landing, test_event_code } = req.query;
   console.log("📩 Входящий постбек:", req.query);
+
   if (!subid) {
     return res.status(400).json({ status: "error", message: "Missing subid" });
   }
+
   let cleanDomain = "orbitflow.lol";
   if (isReal(landing)) {
     cleanDomain = landing.replace(/^https?:\/\//, "").split("/")[0];
   }
   const event_source_url = `https://${cleanDomain}/`;
+
+  // --- event_time = сейчас (приход постбека = момент конверсии) ---
+  const event_time = Math.floor(Date.now() / 1000);
+
+  // --- fbc timestamp = ВРЕМЯ КЛИКА (на 1-24 часа РАНЬШЕ конверсии) ---
+  // Клик всегда происходит до депа, FB это проверяет.
+  // Случайное смещение имитирует реальную воронку.
+  const fbc_time = event_time - (3600 + Math.floor(Math.random() * 82800));
   const fbc = isReal(fbclid)
-    ? `fb.1.${Math.floor(Date.now() / 1000)}.${fbclid}`
+    ? `fb.1.${fbc_time}.${fbclid}`
     : undefined;
+
+  // --- Case-insensitive сравнение: ловим "Sale", "sale", "SALE" одинаково ---
   let event_name;
-  if (event === "sale") {
+  if (event && event.toLowerCase() === "sale") {
     event_name = "Purchase";
   } else {
     event_name = "CompleteRegistration";
   }
   const isPurchase = event_name === "Purchase";
   const event_id = `${subid}_${event_name}`;
+
   const user_data = {
     client_user_agent: ua || undefined,
     client_ip_address: ip || undefined,
@@ -39,9 +54,10 @@ app.get("/capi", async (req, res) => {
     fbp: isReal(fbp) ? fbp : undefined,
   };
   Object.keys(user_data).forEach((k) => user_data[k] === undefined && delete user_data[k]);
+
   const eventData = {
     event_name,
-    event_time: Math.floor(Date.now() / 1000),
+    event_time,
     action_source: "website",
     event_id,
     event_source_url,
@@ -50,10 +66,12 @@ app.get("/capi", async (req, res) => {
       ? { currency: "USD", value: parseFloat(amount) || 0 }
       : { content_name: "registration" },
   };
+
   const payload = { data: [eventData] };
   if (isReal(test_event_code)) {
     payload.test_event_code = test_event_code;
   }
+
   try {
     const fbURL = `https://graph.facebook.com/${API_VERSION}/${PIXEL_ID}/events?access_token=${ACCESS_TOKEN}`;
     const response = await fetch(fbURL, {
@@ -73,5 +91,6 @@ app.get("/capi", async (req, res) => {
     return res.status(500).json({ status: "error", message: error.message });
   }
 });
+
 app.get("/", (req, res) => res.json({ status: "alive" }));
 app.listen(PORT, () => console.log(`🚀 CAPI сервер на порту ${PORT}`));
