@@ -25,18 +25,12 @@ app.get("/capi", async (req, res) => {
   }
   const event_source_url = `https://${cleanDomain}/`;
 
-  // --- event_time = сейчас (приход постбека = момент конверсии) ---
-  const event_time = Math.floor(Date.now() / 1000);
-
-  // --- fbc timestamp = ВРЕМЯ КЛИКА (на 1-24 часа РАНЬШЕ конверсии) ---
-  // Клик всегда происходит до депа, FB это проверяет.
-  // Случайное смещение имитирует реальную воронку.
-  const fbc_time = event_time - (3600 + Math.floor(Math.random() * 82800));
+  // --- fbc timestamp в МИЛЛИСЕКУНДАХ (как требует FB) ---
   const fbc = isReal(fbclid)
-    ? `fb.1.${fbc_time}.${fbclid}`
+    ? `fb.1.${Date.now()}.${fbclid}`
     : undefined;
 
-  // --- Case-insensitive сравнение: ловим "Sale", "sale", "SALE" одинаково ---
+  // --- Case-insensitive: "Sale", "sale", "SALE" → Purchase ---
   let event_name;
   if (event && event.toLowerCase() === "sale") {
     event_name = "Purchase";
@@ -57,7 +51,7 @@ app.get("/capi", async (req, res) => {
 
   const eventData = {
     event_name,
-    event_time,
+    event_time: Math.floor(Date.now() / 1000),  // event_time остаётся в секундах
     action_source: "website",
     event_id,
     event_source_url,
